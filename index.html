@@ -54,18 +54,105 @@
   document.getElementById("highscore").textContent = "High Score: " + highScore;
 
   const box = {
-    x: 200,
-    y: 150,
+    x: 100,
+    y: 100,
     size: 40
   };
 
   let timerInterval;
 
-  function drawBox() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "dodgerblue";
-    ctx.fillRect(box.x, box.y, box.size, box.size);
+  function randomizeBoxSize() {
+    const sizes = [20, 30, 40, 55, 70];
+    box.size = sizes[Math.floor(Math.random() * sizes.length)];
   }
 
   function moveBox() {
-    box
+    box.x = Math.floor(Math.random() * (canvas.width - box.size));
+    box.y = Math.floor(Math.random() * (canvas.height - box.size));
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!gameOver) {
+      ctx.fillStyle = "dodgerblue";
+      ctx.fillRect(box.x, box.y, box.size, box.size);
+    } else {
+      ctx.fillStyle = "white";
+      ctx.font = "32px Arial";
+      ctx.fillText("TIME UP!", 160, 200);
+    }
+  }
+
+  canvas.addEventListener("click", function (event) {
+    if (gameOver) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+
+    if (
+      mouseX >= box.x &&
+      mouseX <= box.x + box.size &&
+      mouseY >= box.y &&
+      mouseY <= box.y + box.size
+    ) {
+      score++;
+      document.getElementById("score").textContent = "Score: " + score;
+
+      randomizeBoxSize();
+      moveBox();
+    } else {
+      score = Math.max(0, score - 1);
+      document.getElementById("score").textContent = "Score: " + score;
+    }
+  });
+
+  function startTimer() {
+    timerInterval = setInterval(function () {
+      if (timeLeft > 0) {
+        timeLeft--;
+        document.getElementById("timer").textContent = "Time: " + timeLeft;
+      } else {
+        gameOver = true;
+        clearInterval(timerInterval);
+
+        if (score > highScore) {
+          highScore = score;
+          localStorage.setItem("highScore", highScore);
+          document.getElementById("highscore").textContent = "High Score: " + highScore;
+        }
+      }
+    }, 1000);
+  }
+
+  document.getElementById("restartBtn").addEventListener("click", function () {
+    score = 0;
+    timeLeft = 30;
+    gameOver = false;
+
+    document.getElementById("score").textContent = "Score: 0";
+    document.getElementById("timer").textContent = "Time: 30";
+
+    randomizeBoxSize();
+    moveBox();
+
+    clearInterval(timerInterval);
+    startTimer();
+  });
+
+  // ✅ Game loop (keeps box visible)
+  function gameLoop() {
+    draw();
+    requestAnimationFrame(gameLoop);
+  }
+
+  // Start game
+  randomizeBoxSize();
+  moveBox();
+  startTimer();
+  gameLoop();
+</script>
+
+</body>
+</html>
