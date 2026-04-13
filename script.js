@@ -4,14 +4,14 @@ const ctx = canvas.getContext("2d");
 let score = 0;
 
 // Box object
-let box = {
-  x: 100,
-  y: 100,
+const box = {
+  x: 200,
+  y: 150,
   size: 40
 };
 
-// Draw box
-function draw() {
+// Draw the box
+function drawBox() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "dodgerblue";
   ctx.fillRect(box.x, box.y, box.size, box.size);
@@ -19,27 +19,30 @@ function draw() {
 
 // Move box to random spot
 function moveBox() {
-  box.x = Math.random() * (canvas.width - box.size);
-  box.y = Math.random() * (canvas.height - box.size);
+  box.x = Math.floor(Math.random() * (canvas.width - box.size));
+  box.y = Math.floor(Math.random() * (canvas.height - box.size));
 }
 
 // Click detection
-canvas.addEventListener("click", function (e) {
+canvas.addEventListener("click", function (event) {
   const rect = canvas.getBoundingClientRect();
-  const mouseX = e.clientX - rect.left;
-  const mouseY = e.clientY - rect.top;
+  const mouseX = event.clientX - rect.left;
+  const mouseY = event.clientY - rect.top;
 
   if (
-    mouseX > box.x &&
-    mouseX < box.x + box.size &&
-    mouseY > box.y &&
-    mouseY < box.y + box.size
+    mouseX >= box.x &&
+    mouseX <= box.x + box.size &&
+    mouseY >= box.y &&
+    mouseY <= box.y + box.size
   ) {
     score++;
-    document.getElementById("score").innerText = "Score: " + score;
-    moveBox();
+    document.getElementById("score").textContent = "Score: " + score;
+
+    moveBox();   // ✅ change position
+    drawBox();   // ✅ redraw canvas
   }
 });
 
-// Start game
-draw();
+// Start the game
+drawBox();
+``
