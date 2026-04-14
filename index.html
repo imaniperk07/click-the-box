@@ -26,6 +26,10 @@
     font-size: 16px;
     cursor: pointer;
   }
+
+  #leaderboard {
+    margin-top: 20px;
+  }
 </style>
 </head>
 
@@ -38,30 +42,46 @@
 
 <p id="score">Score: 0</p>
 <p id="timer">Time: 30</p>
-<p id="highscore">High Score: 0</p>
 
 <button id="restartBtn">Restart</button>
+
+<div id="leaderboard">
+  <h2>🏆 Leaderboard</h2>
+  <ol id="leaderboardList"></ol>
+</div>
 
 <script>
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
 
+  // Ask for player name
+  let playerName = prompt("Enter your name:") || "Player";
+
   let score = 0;
   let timeLeft = 30;
   let gameOver = false;
 
-  let highScore = localStorage.getItem("highScore") || 0;
-  document.getElementById("highscore").textContent = "High Score: " + highScore;
+  let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
 
   const box = {
     x: 100,
     y: 100,
-    size: 40
+    size: 40,
+    color: "dodgerblue"
   };
 
   let timerInterval;
 
-  function randomizeBoxSize() {
+  function randomColor() {
+    const colors = [
+      "#ff5252", "#ff9800", "#ffeb3b",
+      "#4caf50", "#00bcd4", "#2196f3",
+      "#9c27b0", "#e91e63"
+    ];
+    box.color = colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  function randomSize() {
     const sizes = [20, 30, 40, 55, 70];
     box.size = sizes[Math.floor(Math.random() * sizes.length)];
   }
@@ -75,7 +95,7 @@
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (!gameOver) {
-      ctx.fillStyle = "dodgerblue";
+      ctx.fillStyle = box.color;
       ctx.fillRect(box.x, box.y, box.size, box.size);
     } else {
       ctx.fillStyle = "white";
@@ -100,7 +120,8 @@
       score++;
       document.getElementById("score").textContent = "Score: " + score;
 
-      randomizeBoxSize();
+      randomColor();
+      randomSize();
       moveBox();
     } else {
       score = Math.max(0, score - 1);
@@ -108,22 +129,38 @@
     }
   });
 
+  function endGame() {
+    gameOver = true;
+    clearInterval(timerInterval);
+
+    leaderboard.push({ name: playerName, score: score });
+    leaderboard.sort((a, b) => b.score - a.score);
+    leaderboard = leaderboard.slice(0, 5);
+
+    localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+    updateLeaderboard();
+  }
+
   function startTimer() {
     timerInterval = setInterval(function () {
       if (timeLeft > 0) {
         timeLeft--;
         document.getElementById("timer").textContent = "Time: " + timeLeft;
       } else {
-        gameOver = true;
-        clearInterval(timerInterval);
-
-        if (score > highScore) {
-          highScore = score;
-          localStorage.setItem("highScore", highScore);
-          document.getElementById("highscore").textContent = "High Score: " + highScore;
-        }
+        endGame();
       }
     }, 1000);
+  }
+
+  function updateLeaderboard() {
+    const list = document.getElementById("leaderboardList");
+    list.innerHTML = "";
+
+    leaderboard.forEach(entry => {
+      const li = document.createElement("li");
+      li.textContent = entry.name + " - " + entry.score;
+      list.appendChild(li);
+    });
   }
 
   document.getElementById("restartBtn").addEventListener("click", function () {
@@ -134,22 +171,24 @@
     document.getElementById("score").textContent = "Score: 0";
     document.getElementById("timer").textContent = "Time: 30";
 
-    randomizeBoxSize();
+    randomColor();
+    randomSize();
     moveBox();
 
     clearInterval(timerInterval);
     startTimer();
   });
 
-  // ✅ Game loop (keeps box visible)
   function gameLoop() {
     draw();
     requestAnimationFrame(gameLoop);
   }
 
   // Start game
-  randomizeBoxSize();
+  randomColor();
+  randomSize();
   moveBox();
+  updateLeaderboard();
   startTimer();
   gameLoop();
 </script>
