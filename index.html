@@ -21,14 +21,24 @@
   }
 
   button {
-    margin-top: 10px;
-    padding: 8px 16px;
+    padding: 10px 18px;
     font-size: 16px;
     cursor: pointer;
+    margin: 6px;
+  }
+
+  #menu {
+    margin-top: 40px;
   }
 
   #leaderboard {
     margin-top: 20px;
+  }
+
+  input {
+    padding: 6px;
+    font-size: 16px;
+    margin-bottom: 10px;
   }
 </style>
 </head>
@@ -36,26 +46,38 @@
 <body>
 
 <h1>Click the Box!</h1>
-<p>Click the box as many times as you can in 30 seconds.</p>
 
-<canvas id="gameCanvas" width="500" height="400"></canvas>
+<!-- START MENU -->
+<div id="menu">
+  <p>Enter your name:</p>
+  <input id="nameInput" placeholder="Your name">
 
-<p id="score">Score: 0</p>
-<p id="timer">Time: 30</p>
+  <p>Select difficulty:</p>
+  <button onclick="startGame('normal')">Normal</button>
+  <button onclick="startGame('hard')">Hard</button>
+</div>
 
-<button id="restartBtn">Restart</button>
+<!-- GAME UI -->
+<div id="gameUI" style="display:none;">
+  <canvas id="gameCanvas" width="500" height="400"></canvas>
 
-<div id="leaderboard">
-  <h2>🏆 Leaderboard</h2>
-  <ol id="leaderboardList"></ol>
+  <p id="score">Score: 0</p>
+  <p id="timer">Time: 30</p>
+
+  <button onclick="restartGame()">Restart</button>
+
+  <div id="leaderboard">
+    <h2>🏆 Leaderboard</h2>
+    <ol id="leaderboardList"></ol>
+  </div>
 </div>
 
 <script>
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
 
-  // Ask for player name
-  let playerName = prompt("Enter your name:") || "Player";
+  let playerName = "Player";
+  let difficulty = "normal";
 
   let score = 0;
   let timeLeft = 30;
@@ -67,17 +89,15 @@
     x: 100,
     y: 100,
     size: 40,
-    color: "dodgerblue"
+    color: "dodgerblue",
+    dx: 2,
+    dy: 2
   };
 
   let timerInterval;
 
   function randomColor() {
-    const colors = [
-      "#ff5252", "#ff9800", "#ffeb3b",
-      "#4caf50", "#00bcd4", "#2196f3",
-      "#9c27b0", "#e91e63"
-    ];
+    const colors = ["#ff5252","#ff9800","#ffeb3b","#4caf50","#2196f3","#9c27b0"];
     box.color = colors[Math.floor(Math.random() * colors.length)];
   }
 
@@ -86,9 +106,17 @@
     box.size = sizes[Math.floor(Math.random() * sizes.length)];
   }
 
-  function moveBox() {
-    box.x = Math.floor(Math.random() * (canvas.width - box.size));
-    box.y = Math.floor(Math.random() * (canvas.height - box.size));
+  function moveBoxRandom() {
+    box.x = Math.random() * (canvas.width - box.size);
+    box.y = Math.random() * (canvas.height - box.size);
+  }
+
+  function moveBoxHard() {
+    box.x += box.dx;
+    box.y += box.dy;
+
+    if (box.x <= 0 || box.x + box.size >= canvas.width) box.dx *= -1;
+    if (box.y <= 0 || box.y + box.size >= canvas.height) box.dy *= -1;
   }
 
   function draw() {
@@ -104,45 +132,34 @@
     }
   }
 
-  canvas.addEventListener("click", function (event) {
+  canvas.addEventListener("click", function (e) {
     if (gameOver) return;
 
     const rect = canvas.getBoundingClientRect();
-    const mouseX = event.clientX - rect.left;
-    const mouseY = event.clientY - rect.top;
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
 
     if (
-      mouseX >= box.x &&
-      mouseX <= box.x + box.size &&
-      mouseY >= box.y &&
-      mouseY <= box.y + box.size
+      mx >= box.x && mx <= box.x + box.size &&
+      my >= box.y && my <= box.y + box.size
     ) {
       score++;
       document.getElementById("score").textContent = "Score: " + score;
 
       randomColor();
-      randomSize();
-      moveBox();
+
+      if (difficulty === "normal") {
+        randomSize();
+        moveBoxRandom();
+      }
     } else {
       score = Math.max(0, score - 1);
       document.getElementById("score").textContent = "Score: " + score;
     }
   });
 
-  function endGame() {
-    gameOver = true;
-    clearInterval(timerInterval);
-
-    leaderboard.push({ name: playerName, score: score });
-    leaderboard.sort((a, b) => b.score - a.score);
-    leaderboard = leaderboard.slice(0, 5);
-
-    localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
-    updateLeaderboard();
-  }
-
   function startTimer() {
-    timerInterval = setInterval(function () {
+    timerInterval = setInterval(() => {
       if (timeLeft > 0) {
         timeLeft--;
         document.getElementById("timer").textContent = "Time: " + timeLeft;
@@ -152,10 +169,21 @@
     }, 1000);
   }
 
+  function endGame() {
+    gameOver = true;
+    clearInterval(timerInterval);
+
+    leaderboard.push({ name: playerName, score: score });
+    leaderboard.sort((a,b) => b.score - a.score);
+    leaderboard = leaderboard.slice(0,5);
+
+    localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+    updateLeaderboard();
+  }
+
   function updateLeaderboard() {
     const list = document.getElementById("leaderboardList");
     list.innerHTML = "";
-
     leaderboard.forEach(entry => {
       const li = document.createElement("li");
       li.textContent = entry.name + " - " + entry.score;
@@ -163,7 +191,26 @@
     });
   }
 
-  document.getElementById("restartBtn").addEventListener("click", function () {
+  function gameLoop() {
+    if (!gameOver && difficulty === "hard") {
+      moveBoxHard();
+    }
+    draw();
+    requestAnimationFrame(gameLoop);
+  }
+
+  function startGame(mode) {
+    difficulty = mode;
+    playerName = document.getElementById("nameInput").value || "Player";
+
+    document.getElementById("menu").style.display = "none";
+    document.getElementById("gameUI").style.display = "block";
+
+    restartGame();
+    gameLoop();
+  }
+
+  function restartGame() {
     score = 0;
     timeLeft = 30;
     gameOver = false;
@@ -172,25 +219,20 @@
     document.getElementById("timer").textContent = "Time: 30";
 
     randomColor();
-    randomSize();
-    moveBox();
+
+    if (difficulty === "normal") {
+      randomSize();
+      moveBoxRandom();
+    } else {
+      box.size = 35;
+      box.dx = 3;
+      box.dy = 3;
+    }
 
     clearInterval(timerInterval);
     startTimer();
-  });
-
-  function gameLoop() {
-    draw();
-    requestAnimationFrame(gameLoop);
+    updateLeaderboard();
   }
-
-  // Start game
-  randomColor();
-  randomSize();
-  moveBox();
-  updateLeaderboard();
-  startTimer();
-  gameLoop();
 </script>
 
 </body>
